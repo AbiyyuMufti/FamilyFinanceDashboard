@@ -13,7 +13,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, s
 client = gspread.authorize(creds)
 
 # 3. Open the Google Sheet
-sheet = client.open_by_url(gsheet_url).sheet1
+sheet = client.open_by_url(gsheet_url).get_worksheet_by_id(1486134437)
 data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
