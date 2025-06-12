@@ -3,3 +3,5 @@ gspread
 oauth2client
 pandas
 polars
+streamlit-echarts
+pyecharts

@@ -1,3 +1,9 @@
+deprecated/
+notebook/
 .streamlit/secrets.toml
 .streamlit/familyfinance-462606-9c9b1aab6080.json
-deprecated/
+*.ipynb
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints
+# Ignore Python bytecode files
+__pycache__/
