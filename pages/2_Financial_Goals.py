@@ -1,102 +1,73 @@
+import datetime
+from dateutil.relativedelta import relativedelta
+# from st_aggrid import AgGrid, GridOptionsBuilder
 import streamlit as st
 import pandas as pd
-import numpy as np
-from datetime import datetime
+import polars as pl
+from utility import get_st_theme, global_data_selector
+from utility import datamanager as dm
+from utility import visualization as viz
 from streamlit_echarts import st_echarts
 
-from utility import global_data_selector
+# ---------------------------
+# Page Configuration
+# ---------------------------
+base_theme = get_st_theme()
 
-# Simulated financial goals data
-goals_data = [
-    {"goal": "Mortgage 2025", "target": 36000000, "saved": 18000000, "deadline": "2025-12-01", "frequency": "Yearly"},
-    {"goal": "Emergency Fund", "target": 30000000, "saved": 12000000, "deadline": "2025-06-01", "frequency": "One-time"},
-    {"goal": "Hajj Saving", "target": 50000000, "saved": 25000000, "deadline": "2026-08-01", "frequency": "Monthly"},
-    {"goal": "New Laptop", "target": 15000000, "saved": 6000000, "deadline": "2025-09-30", "frequency": "One-time"},
-]
+# ---------------------------
+# Section 1: Data Functions
+# ---------------------------
+def get_category_dropdown(finance_goal_df: pd.DataFrame):
+    return finance_goal_df['Budget Item'].to_list()
 
-# Prepare dataframe
-df = pd.DataFrame(goals_data)
-df["deadline"] = pd.to_datetime(df["deadline"])
-df["remaining"] = df["target"] - df["saved"]
-df["progress_pct"] = (df["saved"] / df["target"] * 100).round(2)
+# ---------------------------
+# Section 2: UI Display Functions
+# ---------------------------
+def display_finance_goal_selectbox(category: list):
+    return st.selectbox(
+        "Select a Budget Category", 
+        category,
+        index=category.index('Tabungan Haji')
+    )
 
-# Page title
-year, month = global_data_selector()
-st.title("🎯 Financial Goals Progress")
+def display_finance_goal_metrics(finance_goal_df: pd.DataFrame, selected_category: str):
+    def months_difference(date1, date2):
+        """Calculates the difference between two dates in months."""
+        
+        delta = relativedelta(date2, date1)
+        return delta.years * 12 + delta.months
+    
+    st.subheader(f"📌 {selected_category}")
+    row = finance_goal_df[finance_goal_df['Budget Item'] == selected_category].iloc[0]
+    col1, col2, col3 = st.columns(3)
 
-# Select a goal
-goal_list = df["goal"].tolist()
-selected_goal = st.selectbox("Select a Goal to View Progress", goal_list)
+    target = f'Rp {row['Financial Goal']:,.0f}'
+    achieved = f'Rp {row['Currenlty Achieved']:,.0f}'
+    remaining = f'Rp {row['Remaining']:,.0f}'
 
-# Extract selected goal info
-goal_row = df[df["goal"] == selected_goal].iloc[0]
-days_remaining = (goal_row["deadline"] - datetime.today()).days
+    col1.metric("🎯 Financial Goal", target.replace(',','.') + ',00')
+    col2.metric("💰 Saved", achieved.replace(',','.') + ',00')
+    col3.metric("🧮 Remaining", remaining.replace(',','.') + ',00')
 
-# Metrics
-st.subheader(f"📌 {selected_goal}")
-col1, col2, col3 = st.columns(3)
-col1.metric("🎯 Target", f"Rp {goal_row['target']:,}")
-col2.metric("💰 Saved", f"Rp {goal_row['saved']:,}")
-col3.metric("🧮 Remaining", f"Rp {goal_row['remaining']:,}")
+    due_date = row['Due Date']
+    st.write(f"🗓️ **Deadline**: {due_date.date()} ({months_difference(datetime.date.today(), due_date)} months left)")
+    st.write(f"📈 **Progress**: {100 * (row['Currenlty Achieved']/row['Financial Goal'])}%")
 
-# Deadline & progress
-st.write(f"🗓️ **Deadline**: {goal_row['deadline'].date()} ({days_remaining} days left)")
-st.write(f"📈 **Progress**: {goal_row['progress_pct']}%")
+# ---------------------------
+# Section 3: Main App Logic
+# ---------------------------
 
-# --- ECharts: Gauge Progress Chart ---
-gauge_option = {
-    "series": [
-        {
-            "type": "gauge",
-            "progress": {"show": True, "width": 18},
-            "axisLine": {"lineStyle": {"width": 18}},
-            "axisTick": {"show": False},
-            "splitLine": {"length": 15, "lineStyle": {"width": 2, "color": "#999"}},
-            "axisLabel": {"distance": 25, "color": "#999", "fontSize": 14},
-            "anchor": {"show": True, "showAbove": True, "size": 20, "itemStyle": {"borderWidth": 10}},
-            "title": {"show": True, "offsetCenter": [0, "60%"]},
-            "detail": {
-                "valueAnimation": True,
-                "formatter": "{value}%",
-                "fontSize": 24
-            },
-            "data": [{"value": float(goal_row["progress_pct"]), "name": "Progress"}]
-        }
-    ]
-}
-st_echarts(options=gauge_option, height="400px")
+def main():
+    st.title("🎯 Financial Goals Progress")
 
-# --- Simulate Monthly Savings Data ---
-def simulate_monthly_progress(saved_total, months=7):
-    base = saved_total / months
-    progress = np.cumsum(np.random.normal(loc=base, scale=base * 0.1, size=months)).clip(min=0, max=saved_total)
-    dates = pd.date_range(end=datetime.today(), periods=months, freq="ME").to_pydatetime()
-    return pd.DataFrame({"month": [d.strftime("%b %Y") for d in dates], "saved": progress.astype(int)})
+    year, month, worksheet = global_data_selector()
+    anual_budget = dm.load_anual_budget()
+    category = display_finance_goal_selectbox(get_category_dropdown(anual_budget))
+    display_finance_goal_metrics(anual_budget.to_pandas(), category)
 
-monthly_df = simulate_monthly_progress(goal_row["saved"])
 
-# --- ECharts: Line Chart for Monthly Progress ---
-st.subheader("📊 Monthly Savings Progress")
-
-line_option = {
-    "tooltip": {"trigger": "axis"},
-    "xAxis": {
-        "type": "category",
-        "data": monthly_df["month"].tolist(),
-        "axisLabel": {"rotate": 30}
-    },
-    "yAxis": {"type": "value", "name": "Saved (Rp)"},
-    "series": [{
-        "data": monthly_df["saved"].tolist(),
-        "type": "line",
-        "smooth": True,
-        "areaStyle": {},
-        "name": "Saved"
-    }],
-    "color": ["#91cc75"]
-}
-st_echarts(options=line_option, height="400px")
-
-# --- Expandable Full Table ---
-with st.expander("📋 View All Goals"):
-    st.dataframe(df[["goal", "target", "saved", "remaining", "progress_pct", "deadline"]])
+# ---------------------------
+# Run App
+# ---------------------------
+if __name__ == "__main__":
+    main()

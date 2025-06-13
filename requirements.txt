@@ -6,3 +6,4 @@ polars
 streamlit-echarts
 pyecharts
 st-theme
+streamlit-aggrid

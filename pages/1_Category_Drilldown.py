@@ -1,101 +1,123 @@
+import datetime
+from st_aggrid import AgGrid, GridOptionsBuilder
 import streamlit as st
 import pandas as pd
-import numpy as np
+import polars as pl
+from utility import get_st_theme, global_data_selector
+from utility import datamanager as dm
+from utility import visualization as viz
 from streamlit_echarts import st_echarts
 
-from utility import global_data_selector
+# ---------------------------
+# Page Configuration
+# ---------------------------
+base_theme = get_st_theme()
 
-# Sample data
-df = pd.DataFrame({
-    "tags": ["Food", "Transport", "Utilities", "Entertainment", "Healthcare"],
-    "planned": 1000 * np.array([2000, 1500, 1000, 800, 1200]),
-    "actual": 1000 * np.array([1800, 1400, 950, 850, 1000]),
-})
-df["remaining"] = df["planned"] - df["actual"]
+# ---------------------------
+# Section 1: Data Functions
+# ---------------------------
+def get_category_dropdown(category_df: pd.DataFrame):
+    return category_df['Budget Category'].to_list()
 
+def filter_month_transaction_by_category(df: pl.DataFrame, category: str, month: str, year: int):
+    month_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    return df.filter(
+        pl.col('Budget Category').eq(category),
+        pl.col('Transaction Date').ge(datetime.date(year, month_list.index(month) + 1, 1)),
+        pl.col('Transaction Date').lt(datetime.date(year, month_list.index(month) + 2, 1))
+    )
 
-year, month = global_data_selector()
-st.title("🔍 Category Drilldown")
+# ---------------------------
+# Section 2: UI Display Functions
+# ---------------------------
+def display_budget_category_selectbox(category: list):
+    return st.selectbox(
+        "Select a Budget Category", 
+        category,
+        index=category.index('Kebutuhan Harian')
+    )
 
-# Dropdown selector
-category = st.selectbox("Select a Budget Category", df["tags"])
+def display_category_metrics(category_df: pd.DataFrame, selected_category: str, unallocated: int):
+    # Show metrics
+    st.markdown(f"### 💼 {selected_category}")
+    col1, col2, col3 = st.columns(3)
+    row = category_df[category_df['Budget Category'] == selected_category].iloc[0]
 
-row = df[df["tags"] == category].iloc[0]
-# Convert to native types
-planned = int(row["planned"])
-actual = int(row["actual"])
-remaining = int(row["remaining"])
+    planned = f"Rp {row["Planned"]:,.0f}"
+    actual = f"Rp {row["Actual"]:,.0f}"
+    col1.metric("Planned", planned.replace(',','.') + ',00')
+    col2.metric("Actual", actual.replace(',','.') + ',00')
+    col3.metric("Difference", row["Difference"])
 
-# Show metrics
-st.markdown(f"### 💼 {category}")
-col1, col2, col3 = st.columns(3)
-col1.metric("Planned", f"Rp {planned:,.0f}")
-col2.metric("Actual", f"Rp {actual:,.0f}")
-col3.metric("Remaining", f"Rp {remaining:,.0f}")
+    chart = viz.create_horizontal_bar_chart(row["Planned"], row["Actual"])
+    st_echarts(options=chart, height="200px", renderer="svg", theme=base_theme)
 
-# Grouped bar chart
-bar_option = {
-    "xAxis": {
-        "type": "category",
-        "data": ["Budget"]
-    },
-    "yAxis": {
-        "type": "value"
-    },
-    "series": [
-        {
-            "name": "Planned",
-            "type": "bar",
-            "data": [planned],
-            "itemStyle": {"color": "#2196F3"}
-        },
-        {
-            "name": "Actual",
-            "type": "bar",
-            "data": [actual],
-            "itemStyle": {"color": "#4CAF50"}
-        }
-    ],
-    "legend": {
-        "data": ["Planned", "Actual"]
+def display_stacked_chart(filtered_df: pl.DataFrame):
+    dxd_activity = filtered_df.pivot(
+        on='Budget Item',
+        index=['Transaction Date'],
+        values='Transasction Amount',
+        aggregate_function='sum'
+    ).with_columns(
+        pl.col('Transaction Date').dt.to_string()
+    ).fill_null(0).sort('Transaction Date').to_pandas().set_index('Transaction Date')
+
+    options = {
+        "tooltip": {"trigger": "axis"},
+        "legend": {"data": list(dxd_activity.columns)},
+        "xAxis": {"type": "category", "data": list(dxd_activity.index)},
+        "yAxis": {"type": "value"},
+        "series": [
+            {
+                "name": col,
+                "type": "bar",
+                "stack": "total",
+                "emphasis": {"focus": "series"},
+                "data": dxd_activity[col].tolist(),
+            } for col in dxd_activity.columns
+        ]
     }
-}
+    print(options)
+    st.subheader('💸 Day-to-day Transaction Summary')
+    st_echarts(options=options, height="400px", theme=base_theme)
 
-st_echarts(options=bar_option, height="300px")
+def display_transaction_table(data: pl.DataFrame):
+    # with st.expander("# 📋 Transaction Details"):
+    df = data.select(
+        pl.exclude([''])
+    ).to_pandas()
+    st.markdown("### 📋 Transaction Details")
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(groupable=True, enableRowGroup=True, editable=False)
+    gb.configure_grid_options(domLayout='normal')
+    grid_options = gb.build()
 
-# Donut chart
-donut_option = {
-    "tooltip": {"trigger": "item"},
-    "legend": {"top": "5%", "left": "center"},
-    "series": [
-        {
-            "name": "Budget",
-            "type": "pie",
-            "radius": ["40%", "70%"],
-            "avoidLabelOverlap": False,
-            "itemStyle": {
-                "borderRadius": 10,
-                "borderColor": "#fff",
-                "borderWidth": 2
-            },
-            "label": {"show": False, "position": "center"},
-            "emphasis": {
-                "label": {
-                    "show": True,
-                    "fontSize": "18",
-                    "fontWeight": "bold"
-                }
-            },
-            "labelLine": {"show": False},
-            "data": [
-                {"value": actual, "name": "Actual"},
-                {"value": remaining, "name": "Remaining"},
-            ]
-        }
-    ]
-}
+    AgGrid(df, gridOptions=grid_options, enable_enterprise_modules=True, height=400)
 
-st_echarts(options=donut_option, height="300px")
 
-with st.expander("📄 View Raw Category Data"):
-    st.write(row)
+
+# ---------------------------
+# Section 3: Main App Logic
+# ---------------------------
+def main():
+    st.title("🔍 Category Drilldown")
+    
+    year, month, worksheet = global_data_selector()
+    category_df = dm.load_category_budget_data(worksheet)
+    metrics = dm.load_overview_metrics(worksheet)
+    unallocated_number = float(metrics['total_remaining'].replace('Rp', '').replace('.', '').replace(',00', ''))
+
+    category = display_budget_category_selectbox(get_category_dropdown(category_df))
+    display_category_metrics(category_df, category, unallocated_number)
+
+    transaction_data = dm.load_transaction()
+    category_transaction_data = filter_month_transaction_by_category(transaction_data, category, month, year)
+
+    display_stacked_chart(category_transaction_data)
+    display_transaction_table(category_transaction_data)
+
+# ---------------------------
+# Run App
+# ---------------------------
+if __name__ == "__main__":
+    main()
