@@ -108,12 +108,12 @@ def main():
     year, month, worksheet = global_data_selector()
 
     # Load Data
-    account_data = dm.load_account_data(worksheet)
-    cashflow_data = dm.load_cashflow_data(worksheet)
-    category_df = dm.load_category_budget_data(worksheet)
+    account_data = dm.load_account_data()
+    cashflow_data = dm.load_cashflow_data()
+    category_df = dm.load_category_budget_data()
 
     # Calculations
-    overview_metrics = dm.load_overview_metrics(worksheet)
+    overview_metrics = dm.load_overview_metrics()
     total_saved = overview_metrics["total_saved"]
     total_remaining = overview_metrics["total_remaining"]
     total_holding = overview_metrics["total_holding"]

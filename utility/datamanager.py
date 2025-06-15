@@ -5,21 +5,26 @@ import streamlit as st
 from utility import get_worksheet
 from utility.utils import currency_to_number
 
-
-def load_account_data(worksheet: gspread.Spreadsheet) -> pd.DataFrame:
+@st.cache_data(show_spinner="Loading monthly budget data...")
+def load_account_data() -> pd.DataFrame:
+    worksheet = get_worksheet()
     sheet = worksheet.get_worksheet_by_id(st.secrets["sheets_id"]["accounts_state"])
-    return pl.DataFrame(sheet.get_all_records()).select(
+    account_data = pl.DataFrame(sheet.get_all_records()).select(
         pl.col("Alias").str.split(' - ').list.get(1).alias('Account'),
         pl.col("Alias").str.split(' - ').list.get(0).alias('Owner'),
         pl.col('Account Balance')
     ).to_pandas()
+    return account_data
 
-def load_cashflow_data(worksheet: gspread.Spreadsheet):
+def load_cashflow_data():
+    worksheet = get_worksheet()
     sheet = worksheet.get_worksheet_by_id(st.secrets["sheets_id"]["monthly_overview"])
     cash_flow_raw = sheet.get_values(st.secrets["table_definition"]["cash_flow"])
     return pd.DataFrame(cash_flow_raw[1:], columns=cash_flow_raw[0])    
 
-def load_category_budget_data(worksheet: gspread.Spreadsheet) -> pd.DataFrame:
+@st.cache_data(show_spinner="Loading monthly budget data...")
+def load_category_budget_data() -> pd.DataFrame:
+    worksheet = get_worksheet()
     sheet = worksheet.get_worksheet_by_id(st.secrets["sheets_id"]["monthly_overview"])
     category_overview_raw = sheet.get_values(st.secrets["table_definition"]["category_overview"])
     category_data = pl.from_pandas(pd.DataFrame(category_overview_raw[1:], columns=category_overview_raw[0]))
@@ -33,7 +38,16 @@ def load_category_budget_data(worksheet: gspread.Spreadsheet) -> pd.DataFrame:
 
     return st.session_state.category_summary
 
-def load_overview_metrics(worksheet: gspread.Spreadsheet) -> dict:
+@st.cache_data(show_spinner="Loading monthly budget data...")
+def load_monthly_budget_data() -> pl.DataFrame:
+    worksheet = get_worksheet()
+    sheet = worksheet.get_worksheet_by_id(st.secrets["sheets_id"]["monthly_planning"])
+    monthly_budget = pl.DataFrame(sheet.get_all_records())
+
+    return monthly_budget
+
+def load_overview_metrics() -> dict:
+    worksheet = get_worksheet()
     sheet = worksheet.get_worksheet_by_id(st.secrets["sheets_id"]["monthly_overview"])
     if 'overall_metrics' not in st.session_state:
         st.session_state.overall_metrics = {

@@ -103,8 +103,8 @@ def main():
     st.title("🔍 Category Drilldown")
     
     year, month, worksheet = global_data_selector()
-    category_df = dm.load_category_budget_data(worksheet)
-    metrics = dm.load_overview_metrics(worksheet)
+    category_df = dm.load_category_budget_data()
+    metrics = dm.load_overview_metrics()
     unallocated_number = float(metrics['total_remaining'].replace('Rp', '').replace('.', '').replace(',00', ''))
 
     category = display_budget_category_selectbox(get_category_dropdown(category_df))
