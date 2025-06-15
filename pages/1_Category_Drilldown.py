@@ -77,7 +77,7 @@ def display_stacked_chart(filtered_df: pl.DataFrame):
             } for col in dxd_activity.columns
         ]
     }
-    print(options)
+
     st.subheader('💸 Day-to-day Transaction Summary')
     st_echarts(options=options, height="400px", theme=base_theme)
 
