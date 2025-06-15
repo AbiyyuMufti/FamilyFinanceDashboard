@@ -25,7 +25,8 @@ def input_google_sheet() -> requests.Response:
             ]
     }
     
-    return requests.post(url, json=payload)
+    st.session_state.insert_response = requests.post(url, json=payload)
+    return st.session_state.insert_response
 
 
 def show_transaction_form():
