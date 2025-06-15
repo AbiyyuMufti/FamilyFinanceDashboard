@@ -8,7 +8,7 @@ from utility import datamanager as dm
 from datetime import date, datetime
 import requests
 
-def input_google_sheet():
+def input_google_sheet() -> requests.Response:
     url = st.secrets['insert_url']
     payload = {
         "sheetName": "Money Tracker",
@@ -24,8 +24,8 @@ def input_google_sheet():
             st.session_state.notes
             ]
     }
-    st.session_state.insert_response = requests.post(url, json=payload)
-    # return response
+    
+    return requests.post(url, json=payload)
 
 
 def show_transaction_form():
@@ -85,7 +85,7 @@ def show_transaction_form():
         on_click=input_google_sheet
     )
     if submitted:
-        if st.session_state.insert_response == '<Response [200]>':
+        if st.session_state.insert_response.status_code == 200:
             st.success("✅ Transaction recorded!")
             st.write("### Summary:")
             st.write({
@@ -98,7 +98,7 @@ def show_transaction_form():
             })
         else:
             st.write(
-                st.session_state.insert_response
+                st.session_state.insert_response.json
             )
             
 
