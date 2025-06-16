@@ -9,11 +9,6 @@ from utility import visualization as viz
 from streamlit_echarts import st_echarts
 
 # ---------------------------
-# Page Configuration
-# ---------------------------
-base_theme = get_st_theme()
-
-# ---------------------------
 # Section 1: Data Functions
 # ---------------------------
 def get_category_dropdown(category_df: pd.DataFrame):
@@ -50,7 +45,7 @@ def display_category_metrics(category_df: pd.DataFrame, selected_category: str, 
     col3.metric("Difference", row["Difference"])
 
     chart = viz.create_horizontal_bar_chart(row["Planned"], row["Actual"])
-    st_echarts(options=chart, height="200px", renderer="svg", theme=base_theme)
+    st_echarts(options=chart, height="200px", renderer="svg", theme=get_st_theme())
 
 def display_stacked_chart(filtered_df: pl.DataFrame):
     dxd_activity = filtered_df.pivot(
@@ -79,7 +74,7 @@ def display_stacked_chart(filtered_df: pl.DataFrame):
     }
 
     st.subheader('💸 Day-to-day Transaction Summary')
-    st_echarts(options=options, height="400px", theme=base_theme)
+    st_echarts(options=options, height="400px", theme=get_st_theme())
 
 def display_transaction_table(data: pl.DataFrame):
     # with st.expander("# 📋 Transaction Details"):

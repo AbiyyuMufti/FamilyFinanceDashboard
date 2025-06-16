@@ -6,19 +6,6 @@ from utility import datamanager as dm
 from utility import visualization as viz
 
 # ---------------------------
-# Page Configuration
-# ---------------------------
-st.set_page_config(
-    page_title="Family Finance Dashboard",
-    initial_sidebar_state="collapsed"
-)
-
-base_theme = get_st_theme()
-
-# Section 1: Data Functions
-# ---------------------------
-
-# ---------------------------
 # Section 2: UI Display Functions
 # ---------------------------
 def display_key_metrics(total_remaining, total_saved):
@@ -89,7 +76,7 @@ def display_budgeting_chart(category_df, unallocated):
         chart = viz.create_horizontal_bar_chart(row["Planned"], row["Actual"])
         
         st.markdown(" <style>iframe{ height: 120px } ", unsafe_allow_html=True)
-        st_echarts(options=chart, height="100px", renderer="svg", theme=base_theme)
+        st_echarts(options=chart, height="100px", renderer="svg", theme=get_st_theme())
     
     with st.expander("See Details in table"):
         st.dataframe(
@@ -103,6 +90,14 @@ def display_budgeting_chart(category_df, unallocated):
 # Section 3: Main App Logic
 # ---------------------------
 def main():
+    # ---------------------------
+    # Page Configuration
+    # ---------------------------
+    st.set_page_config(
+        page_title="Family Finance Dashboard",
+        initial_sidebar_state="collapsed"
+    )
+
     st.title("💹 Family Finance Dashboard", anchor='am-finance')
     # Filters
     year, month, worksheet = global_data_selector()

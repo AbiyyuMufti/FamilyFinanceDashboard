@@ -9,11 +9,6 @@ from utility import visualization as viz
 from streamlit_echarts import st_echarts
 
 # ---------------------------
-# Page Configuration
-# ---------------------------
-base_theme = get_st_theme()
-
-# ---------------------------
 # Section 1: Data Functions
 # ---------------------------
 def get_category_dropdown(finance_goal_df: pd.DataFrame):
