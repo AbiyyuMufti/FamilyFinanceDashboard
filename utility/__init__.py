@@ -38,11 +38,11 @@ def global_data_selector():
     
     if 'selected_month' not in st.session_state:
         st.session_state.selected_month = month_list[today.month - 1]
-        worksheet = update_control_sheet()
+        # worksheet = update_control_sheet()
     
     st.sidebar.subheader("📅 Filter Options")
 
-    selected_option = st.sidebar.selectbox(
+    st.sidebar.selectbox(
         "Month",
         month_list,
         index=month_list.index(st.session_state.selected_month),
@@ -51,8 +51,10 @@ def global_data_selector():
     
     if st.session_state.global_selected_month != st.session_state.selected_month:
         st.session_state.selected_month = st.session_state.global_selected_month
-        worksheet = update_control_sheet()
+        # worksheet = update_control_sheet()
         time.sleep(1)
+
+    if st.sidebar.button("Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 

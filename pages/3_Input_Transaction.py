@@ -101,7 +101,7 @@ def show_transaction_form():
             st.write(
                 st.session_state.insert_response.json
             )
-        st.cache_data.clear()
+        # st.cache_data.clear()
             
 
 # Run the form

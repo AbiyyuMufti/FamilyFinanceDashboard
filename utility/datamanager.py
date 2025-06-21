@@ -1,6 +1,5 @@
 import polars as pl
 import pandas as pd
-import gspread
 import streamlit as st
 from utility import get_worksheet
 from utility.utils import currency_to_number
